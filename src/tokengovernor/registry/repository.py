@@ -6,7 +6,7 @@ import logging
 
 from ..core.models import (
     Project, Agent, Task, TaskPackage, TokenUsage, 
-    Checkpoint, SchedulerRule, PriorityTier, TaskStatus
+    Checkpoint, SchedulerRule, PriorityTier, TaskStatus, TaskComplexity, CheckpointState
 )
 from ..database.connection import db_manager
 
@@ -226,13 +226,13 @@ class TaskRepository:
             project_id=row['project_id'],
             name=row['name'],
             description=row['description'],
-            complexity=row['complexity'],
+            complexity=TaskComplexity(row['complexity']),
             estimated_tokens=row['estimated_tokens'],
             actual_tokens=row['actual_tokens'],
             subtask_ids=json.loads(row['subtask_ids']) if row['subtask_ids'] else [],
-            checkpoint_state=row['checkpoint_state'],
+            checkpoint_state=CheckpointState(row['checkpoint_state']),
             checkpoint_uri=row['checkpoint_uri'],
-            status=row['status'],
+            status=TaskStatus(row['status']),
             created_at=datetime.fromisoformat(row['created_at']),
             started_at=datetime.fromisoformat(row['started_at']) if row['started_at'] else None,
             completed_at=datetime.fromisoformat(row['completed_at']) if row['completed_at'] else None,
