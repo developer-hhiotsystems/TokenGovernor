@@ -109,6 +109,8 @@ def main():
                        help='Use HTTPS instead of SSH for Git operations')
     parser.add_argument('--token', type=str,
                        help='GitHub personal access token')
+    parser.add_argument('--force', action='store_true',
+                       help='Skip confirmation prompts')
     args = parser.parse_args()
     
     # Set token if provided
@@ -121,7 +123,7 @@ def main():
     print("=" * 30)
     
     # Check git status
-    if not check_git_status():
+    if not check_git_status() and not args.force:
         response = input("Continue anyway? (y/N): ")
         if response.lower() != 'y':
             print("Aborted. Please commit your changes first.")

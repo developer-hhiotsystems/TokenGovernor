@@ -1,0 +1,181 @@
+{
+  "github_repo_init": {
+    "template_id": "github_repo_init",
+    "name": "GitHub Repository Initialization",
+    "agent_type": "setup",
+    "version": "1.0.0",
+    "steps": [
+      {
+        "step_id": "validate_config",
+        "name": "Validate Project Configuration",
+        "action": "validate_project_config",
+        "parameters": {
+          "config_file": "project_config.json",
+          "required_fields": ["name", "description", "repository"]
+        },
+        "expected_tokens": 500,
+        "timeout": 30
+      },
+      {
+        "step_id": "authenticate_github",
+        "name": "Authenticate with GitHub API", 
+        "action": "github_auth",
+        "parameters": {
+          "token_source": "environment",
+          "required_scopes": ["repo", "workflow"]
+        },
+        "expected_tokens": 200,
+        "timeout": 10
+      },
+      {
+        "step_id": "create_repository",
+        "name": "Create GitHub Repository",
+        "action": "create_repo",
+        "parameters": {
+          "use_ssh": true,
+          "auto_init": false,
+          "private": false
+        },
+        "expected_tokens": 1500,
+        "timeout": 120,
+        "retry_policy": {
+          "max_attempts": 3,
+          "backoff": "exponential"
+        }
+      },
+      {
+        "step_id": "configure_repo_settings",
+        "name": "Configure Repository Settings",
+        "action": "configure_repo",
+        "parameters": {
+          "enable_issues": true,
+          "enable_projects": true,
+          "enable_wiki": false,
+          "delete_branch_on_merge": true
+        },
+        "expected_tokens": 800,
+        "timeout": 60
+      },
+      {
+        "step_id": "setup_remote_origin",
+        "name": "Setup Remote Origin",
+        "action": "git_remote_add", 
+        "parameters": {
+          "remote_name": "origin",
+          "use_ssh": true
+        },
+        "expected_tokens": 300,
+        "timeout": 30
+      }
+    ],
+    "success_criteria": [
+      "repository_created",
+      "remote_configured", 
+      "settings_applied"
+    ],
+    "token_estimate": 3300,
+    "estimated_duration": 300
+  },
+  "branch_setup": {
+    "template_id": "branch_setup",
+    "name": "Branch Structure Setup",
+    "agent_type": "setup",
+    "version": "1.0.0",
+    "steps": [
+      {
+        "step_id": "create_dev_branch",
+        "name": "Create Development Branch",
+        "action": "create_branch",
+        "parameters": {
+          "branch_name": "dev",
+          "source_branch": "main"
+        },
+        "expected_tokens": 400,
+        "timeout": 30
+      },
+      {
+        "step_id": "setup_branch_protection",
+        "name": "Setup Branch Protection Rules",
+        "action": "configure_branch_protection",
+        "parameters": {
+          "branch": "main",
+          "require_reviews": true,
+          "required_reviewers": 1,
+          "dismiss_stale_reviews": true,
+          "require_ci": true
+        },
+        "expected_tokens": 600,
+        "timeout": 60
+      },
+      {
+        "step_id": "create_feature_branch_template",
+        "name": "Create Feature Branch Template",
+        "action": "setup_branch_template",
+        "parameters": {
+          "template_name": "feature/*",
+          "auto_delete": true,
+          "require_pr": true
+        },
+        "expected_tokens": 300,
+        "timeout": 30
+      }
+    ],
+    "success_criteria": [
+      "dev_branch_exists",
+      "protection_rules_active",
+      "template_configured"
+    ],
+    "token_estimate": 1300,
+    "estimated_duration": 120
+  },
+  "actions_config": {
+    "template_id": "actions_config", 
+    "name": "GitHub Actions Configuration",
+    "agent_type": "setup",
+    "version": "1.0.0",
+    "steps": [
+      {
+        "step_id": "create_ci_workflow",
+        "name": "Create CI/CD Workflow",
+        "action": "create_workflow_file",
+        "parameters": {
+          "workflow_name": "ci.yml",
+          "triggers": ["push", "pull_request"],
+          "python_version": "3.11"
+        },
+        "expected_tokens": 2000,
+        "timeout": 90
+      },
+      {
+        "step_id": "create_token_tracking_workflow",
+        "name": "Create Token Tracking Workflow", 
+        "action": "create_workflow_file",
+        "parameters": {
+          "workflow_name": "token-tracking.yml",
+          "triggers": ["workflow_run"],
+          "ccusage_integration": true
+        },
+        "expected_tokens": 1500,
+        "timeout": 60
+      },
+      {
+        "step_id": "setup_secrets",
+        "name": "Setup Repository Secrets",
+        "action": "configure_secrets",
+        "parameters": {
+          "secrets": ["GITHUB_TOKEN", "CLAUDE_API_KEY"],
+          "validate": true
+        },
+        "expected_tokens": 800,
+        "timeout": 45
+      }
+    ],
+    "success_criteria": [
+      "workflows_created",
+      "secrets_configured",
+      "actions_enabled"
+    ],
+    "token_estimate": 4300,
+    "estimated_duration": 195
+  }
+}
