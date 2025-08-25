@@ -1,0 +1,53 @@
+{
+  "project_id": "tokengovernor-mvp",
+  "name": "TokenGovernor",
+  "description": "Standalone governance system for agentic coding workflows",
+  "version": "0.1.0",
+  "phase": "Phase 0 - GitHub Setup and Change Management",
+  "token_budget": 100000,
+  "priority_tier": 1,
+  "owner": "tokengovernor@example.com",
+  "repository": {
+    "name": "TokenGovernor",
+    "private": false,
+    "auto_init": true,
+    "default_branch": "main"
+  },
+  "file_structure": {
+    "estimated_files": 25,
+    "estimated_api_calls": 50,
+    "complexity": "Complex"
+  },
+  "features": [
+    "Project Registry",
+    "Token Inspector/Governor Agent",
+    "Agent Tasks Management", 
+    "Scheduler",
+    "Status Reporting",
+    "Claude-Flow Configuration",
+    "GitHub Integration",
+    "CLI Interface"
+  ],
+  "technologies": [
+    "Python",
+    "FastAPI",
+    "SQLite",
+    "Claude-Flow",
+    "PyGitHub",
+    "ccusage"
+  ],
+  "milestones": [
+    {
+      "phase": "Phase 0",
+      "duration": "2 weeks",
+      "start_date": "2025-08-26",
+      "end_date": "2025-09-08",
+      "deliverables": [
+        "GitHub repo initialization",
+        "PR-based change management",
+        "Basic token tracking with ccusage",
+        "Claude-Flow setup with deep inspection"
+      ]
+    }
+  ]
+}
