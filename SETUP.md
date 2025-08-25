@@ -27,7 +27,11 @@
 
 2. **Run the setup script:**
    ```bash
+   # With SSH (default, recommended)
    python scripts/setup_remote.py
+   
+   # Or with HTTPS
+   python scripts/setup_remote.py --https
    ```
 
 This will:
@@ -47,7 +51,12 @@ This will:
 
 2. **Add remote and push:**
    ```bash
-   git remote add origin https://github.com/YOUR_USERNAME/TokenGovernor.git
+   # With SSH (recommended)
+   git remote add origin git@github.com:developer.hhiotsystems/TokenGovernor.git
+   
+   # Or with HTTPS
+   git remote add origin https://github.com/developer.hhiotsystems/TokenGovernor.git
+   
    git branch -M main
    git push -u origin main
    ```

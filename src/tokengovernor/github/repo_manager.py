@@ -16,7 +16,7 @@ class GitHubRepoManager:
         self.github = Github(self.token)
         self.user = self.github.get_user()
     
-    def create_repository(self, config: Dict[str, Any]) -> str:
+    def create_repository(self, config: Dict[str, Any], use_ssh: bool = True) -> tuple[str, str]:
         """Create a new GitHub repository based on project config"""
         repo_config = config.get('repository', {})
         
@@ -28,8 +28,13 @@ class GitHubRepoManager:
             default_branch=repo_config.get('default_branch', 'main')
         )
         
-        print(f"✅ Created repository: {repo.html_url}")
-        return repo.clone_url
+        print(f"Created repository: {repo.html_url}")
+        
+        # Return both SSH and HTTPS URLs
+        ssh_url = repo.ssh_url
+        https_url = repo.clone_url
+        
+        return (ssh_url if use_ssh else https_url), repo.html_url
     
     def setup_branch_protection(self, repo_name: str, branch: str = 'main'):
         """Set up branch protection rules"""
@@ -46,7 +51,7 @@ class GitHubRepoManager:
             required_approving_review_count=1
         )
         
-        print(f"✅ Branch protection enabled for {branch}")
+        print(f"Branch protection enabled for {branch}")
     
     def get_repo_info(self, repo_name: str) -> Dict[str, Any]:
         """Get repository information"""
@@ -61,7 +66,7 @@ class GitHubRepoManager:
         }
 
 
-def setup_github_repo():
+def setup_github_repo(use_ssh: bool = True):
     """Main function to set up GitHub repository"""
     # Load project configuration
     with open('project_config.json', 'r') as f:
@@ -71,12 +76,14 @@ def setup_github_repo():
     manager = GitHubRepoManager()
     
     # Create repository
-    clone_url = manager.create_repository(config)
+    clone_url, html_url = manager.create_repository(config, use_ssh=use_ssh)
     
     # Return repository information
     return {
         'clone_url': clone_url,
-        'repo_name': config['repository']['name']
+        'html_url': html_url,
+        'repo_name': config['repository']['name'],
+        'use_ssh': use_ssh
     }
 
 

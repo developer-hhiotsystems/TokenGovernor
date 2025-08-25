@@ -6,7 +6,7 @@
   "phase": "Phase 0 - GitHub Setup and Change Management",
   "token_budget": 100000,
   "priority_tier": 1,
-  "owner": "tokengovernor@example.com",
+  "owner": "developer.hhiotsystems",
   "repository": {
     "name": "TokenGovernor",
     "private": false,
