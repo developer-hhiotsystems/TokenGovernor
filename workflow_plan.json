@@ -1,0 +1,121 @@
+{
+  "inspection_results": {
+    "project_id": "tokengovernor-mvp",
+    "analysis_timestamp": "2025-08-25T00:00:00Z",
+    "file_count": 25,
+    "api_calls_estimate": 50,
+    "complexity": "Complex",
+    "token_budget": 100000,
+    "inspection_criteria_met": "10-50 files, 20-100 calls range"
+  },
+  "agent_allocation": {
+    "total_agents": 3,
+    "allocation_rationale": "Complex project with moderate file count and API calls requires coordinated multi-agent approach",
+    "topology": "hierarchical",
+    "coordination_pattern": "Setup → PR → Monitor"
+  },
+  "agents": [
+    {
+      "agent_id": "setup-agent-01",
+      "type": "Setup Agent",
+      "role": "GitHub repository initialization and infrastructure setup",
+      "responsibilities": [
+        "Initialize GitHub repository via PyGitHub",
+        "Create branch structure (main, dev, feature branches)",
+        "Setup GitHub Actions workflows",
+        "Configure repository settings and permissions",
+        "Initialize project structure and base files"
+      ],
+      "token_estimate": 35000,
+      "context_window": 8192,
+      "rate_limit": "5 API calls/min",
+      "dependencies": [],
+      "priority": 1,
+      "stateless": true,
+      "memory_namespace": "setup_operations"
+    },
+    {
+      "agent_id": "pr-agent-01", 
+      "type": "PR Agent",
+      "role": "Change management through PR-based workflows",
+      "responsibilities": [
+        "Create commits with proper templates",
+        "Generate pull requests with standard templates",
+        "Track token usage via ccusage integration",
+        "Coordinate code reviews and approvals",
+        "Manage merge operations and branch cleanup"
+      ],
+      "token_estimate": 40000,
+      "context_window": 8192,
+      "rate_limit": "5 API calls/min", 
+      "dependencies": ["setup-agent-01"],
+      "priority": 2,
+      "stateless": true,
+      "memory_namespace": "pr_operations"
+    },
+    {
+      "agent_id": "monitor-agent-01",
+      "type": "Monitor Agent", 
+      "role": "Token tracking and workflow coordination",
+      "responsibilities": [
+        "Monitor token usage across all operations",
+        "Coordinate between Setup and PR agents",
+        "Track progress against budget allocations",
+        "Generate status reports and alerts",
+        "Manage error handling and retry logic"
+      ],
+      "token_estimate": 25000,
+      "context_window": 8192,
+      "rate_limit": "5 API calls/min",
+      "dependencies": ["setup-agent-01", "pr-agent-01"],
+      "priority": 3,
+      "stateless": true,
+      "memory_namespace": "monitoring_operations"
+    }
+  ],
+  "coordination_config": {
+    "communication_protocol": "event-driven",
+    "shared_memory_channels": [
+      "setup_status",
+      "pr_queue",
+      "token_usage",
+      "error_logs"
+    ],
+    "handoff_patterns": [
+      {
+        "from": "setup-agent-01",
+        "to": "pr-agent-01", 
+        "trigger": "repository_initialized",
+        "data_transfer": "repo_metadata"
+      },
+      {
+        "from": "pr-agent-01",
+        "to": "monitor-agent-01",
+        "trigger": "pr_created",
+        "data_transfer": "token_usage_data"
+      }
+    ],
+    "error_handling": {
+      "retry_attempts": 3,
+      "backoff_strategy": "exponential",
+      "escalation_threshold": 3,
+      "fallback_agent": "monitor-agent-01"
+    }
+  },
+  "resource_allocation": {
+    "total_token_budget": 100000,
+    "agent_budgets": {
+      "setup-agent-01": 35000,
+      "pr-agent-01": 40000, 
+      "monitor-agent-01": 25000
+    },
+    "overhead_buffer": 5000,
+    "emergency_reserve": 10000
+  },
+  "performance_targets": {
+    "setup_completion_time": "30 minutes",
+    "pr_processing_time": "10 minutes per PR",
+    "token_overhead_limit": "2%",
+    "error_rate_threshold": "5%"
+  }
+}
