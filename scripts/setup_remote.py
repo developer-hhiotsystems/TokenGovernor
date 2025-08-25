@@ -107,7 +107,13 @@ def main():
     parser = argparse.ArgumentParser(description='Set up TokenGovernor GitHub repository')
     parser.add_argument('--https', action='store_true', 
                        help='Use HTTPS instead of SSH for Git operations')
+    parser.add_argument('--token', type=str,
+                       help='GitHub personal access token')
     args = parser.parse_args()
+    
+    # Set token if provided
+    if args.token:
+        os.environ['GITHUB_TOKEN'] = args.token
     
     use_ssh = not args.https
     
