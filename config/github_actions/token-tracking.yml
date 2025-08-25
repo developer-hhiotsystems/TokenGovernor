@@ -1,0 +1,422 @@
+name: Token Usage Tracking
+
+on:
+  workflow_run:
+    workflows: ["TokenGovernor CI/CD Pipeline"]
+    types:
+      - completed
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run every hour to track ongoing token usage
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      track_operation:
+        description: 'Operation to track'
+        required: true
+        default: 'manual_tracking'
+        type: choice
+        options:
+          - manual_tracking
+          - budget_analysis
+          - usage_report
+          - efficiency_audit
+      time_window:
+        description: 'Time window for analysis'
+        required: false
+        default: '24h'
+        type: choice
+        options:
+          - '1h'
+          - '6h' 
+          - '24h'
+          - '7d'
+          - '30d'
+
+env:
+  PYTHON_VERSION: '3.11'
+  PROJECT_ID: 'tokengovernor-mvp'
+  PHASE: 'Phase 0'
+
+jobs:
+  initialize-tracking:
+    name: Initialize Token Tracking
+    runs-on: ubuntu-latest
+    outputs:
+      tracking_id: ${{ steps.init.outputs.tracking_id }}
+      budget_status: ${{ steps.budget.outputs.status }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ccusage
+
+      - name: Initialize tracking session
+        id: init
+        run: |
+          TRACKING_ID="track_$(date +%Y%m%d_%H%M%S)_$(echo $RANDOM | md5sum | head -c 8)"
+          echo "tracking_id=$TRACKING_ID" >> $GITHUB_OUTPUT
+          echo "📊 Initialized tracking session: $TRACKING_ID"
+          
+          # Initialize ccusage for this session
+          ccusage init --project-id ${{ env.PROJECT_ID }} --session-id $TRACKING_ID
+
+      - name: Check budget status
+        id: budget
+        run: |
+          python -c "
+          import json
+          import sqlite3
+          import os
+          
+          # Create database if it doesn't exist
+          if not os.path.exists('workflow_data.db'):
+              with open('config/database_schema.sql', 'r') as f:
+                  schema = f.read()
+              conn = sqlite3.connect('workflow_data.db')
+              conn.executescript(schema)
+              conn.close()
+          
+          # Load current budget status
+          with open('workflow_plan.json', 'r') as f:
+              plan = json.load(f)
+          
+          allocated = plan['resource_allocation']['total_token_budget']
+          
+          # Check database for actual usage (this would be updated in real implementation)
+          conn = sqlite3.connect('workflow_data.db')
+          cursor = conn.cursor()
+          cursor.execute('SELECT COALESCE(SUM(consumed_budget), 0) FROM budget_tracking WHERE project_id = ?', ('${{ env.PROJECT_ID }}',))
+          consumed = cursor.fetchone()[0]
+          conn.close()
+          
+          remaining = allocated - consumed
+          utilization = (consumed / allocated) * 100 if allocated > 0 else 0
+          
+          if utilization >= 95:
+              status = 'critical'
+          elif utilization >= 80:
+              status = 'warning' 
+          else:
+              status = 'healthy'
+          
+          print(f'Budget Status: {status}')
+          print(f'Allocated: {allocated:,} tokens')
+          print(f'Consumed: {consumed:,} tokens')
+          print(f'Remaining: {remaining:,} tokens')
+          print(f'Utilization: {utilization:.1f}%')
+          
+          print(f'status={status}' >> '$GITHUB_OUTPUT')
+          "
+
+  track-ci-usage:
+    name: Track CI/CD Token Usage
+    runs-on: ubuntu-latest
+    needs: initialize-tracking
+    if: github.event_name == 'workflow_run'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install ccusage
+        run: pip install ccusage
+
+      - name: Track CI workflow tokens
+        run: |
+          # Estimate tokens used in CI workflow
+          ESTIMATED_TOKENS=2500  # Based on typical CI operations
+          
+          ccusage track \
+            --operation "ci_workflow" \
+            --tokens $ESTIMATED_TOKENS \
+            --context "workflow_run:${{ github.event.workflow_run.id }}" \
+            --metadata '{"trigger":"${{ github.event_name }}","branch":"${{ github.ref_name }}","commit":"${{ github.sha }}"}'
+          
+          echo "🔍 Tracked $ESTIMATED_TOKENS tokens for CI workflow"
+
+      - name: Update database
+        run: |
+          python -c "
+          import sqlite3
+          import json
+          from datetime import datetime
+          
+          # Update token usage in database
+          conn = sqlite3.connect('workflow_data.db')
+          cursor = conn.cursor()
+          
+          cursor.execute('''
+              INSERT INTO token_usage 
+              (agent_id, operation_type, tokens_consumed, operation_start, operation_end, success, context_data)
+              VALUES (?, ?, ?, ?, ?, ?, ?)
+          ''', (
+              'ci-agent',
+              'ci_workflow', 
+              2500,
+              datetime.now(),
+              datetime.now(),
+              1,
+              json.dumps({
+                  'workflow_run_id': '${{ github.event.workflow_run.id }}',
+                  'trigger': '${{ github.event_name }}',
+                  'branch': '${{ github.ref_name }}'
+              })
+          ))
+          
+          conn.commit()
+          conn.close()
+          
+          print('✅ Database updated with CI token usage')
+          "
+
+  track-pr-usage:
+    name: Track PR Operation Usage
+    runs-on: ubuntu-latest
+    needs: initialize-tracking
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install ccusage
+        run: pip install ccusage
+
+      - name: Analyze PR complexity
+        id: analyze
+        run: |
+          # Get PR statistics
+          FILES_CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} | wc -l)
+          LINES_CHANGED=$(git diff --stat ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} | tail -1 | grep -oE '[0-9]+ insertions|[0-9]+ deletions' | grep -oE '[0-9]+' | awk '{sum += $1} END {print sum}')
+          
+          # Estimate tokens based on complexity
+          BASE_TOKENS=1000
+          FILE_TOKENS=$((FILES_CHANGED * 100))
+          LINE_TOKENS=$((LINES_CHANGED * 2))
+          ESTIMATED_TOKENS=$((BASE_TOKENS + FILE_TOKENS + LINE_TOKENS))
+          
+          echo "files_changed=$FILES_CHANGED" >> $GITHUB_OUTPUT
+          echo "lines_changed=$LINES_CHANGED" >> $GITHUB_OUTPUT
+          echo "estimated_tokens=$ESTIMATED_TOKENS" >> $GITHUB_OUTPUT
+          
+          echo "📊 PR Analysis:"
+          echo "  Files changed: $FILES_CHANGED"
+          echo "  Lines changed: $LINES_CHANGED"  
+          echo "  Estimated tokens: $ESTIMATED_TOKENS"
+
+      - name: Track PR tokens
+        run: |
+          ccusage track \
+            --operation "pr_analysis" \
+            --tokens ${{ steps.analyze.outputs.estimated_tokens }} \
+            --context "pr:${{ github.event.pull_request.number }}" \
+            --metadata '{
+              "pr_number": ${{ github.event.pull_request.number }},
+              "files_changed": ${{ steps.analyze.outputs.files_changed }},
+              "lines_changed": ${{ steps.analyze.outputs.lines_changed }},
+              "author": "${{ github.event.pull_request.user.login }}",
+              "action": "${{ github.event.action }}"
+            }'
+
+  generate-usage-report:
+    name: Generate Token Usage Report
+    runs-on: ubuntu-latest
+    needs: [initialize-tracking, track-ci-usage, track-pr-usage]
+    if: always() && (github.event.inputs.track_operation == 'usage_report' || github.event_name == 'schedule')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ccusage matplotlib pandas
+
+      - name: Generate comprehensive report
+        run: |
+          python -c "
+          import json
+          import sqlite3
+          from datetime import datetime, timedelta
+          import pandas as pd
+          
+          # Time window from input or default to 24h
+          time_window = '${{ github.event.inputs.time_window }}' or '24h'
+          hours_back = {
+              '1h': 1, '6h': 6, '24h': 24, 
+              '7d': 168, '30d': 720
+          }.get(time_window, 24)
+          
+          cutoff_time = datetime.now() - timedelta(hours=hours_back)
+          
+          # Connect to database
+          conn = sqlite3.connect('workflow_data.db')
+          
+          # Get usage data
+          df_usage = pd.read_sql_query('''
+              SELECT agent_id, operation_type, tokens_consumed, 
+                     operation_start, success, context_data
+              FROM token_usage 
+              WHERE operation_start >= ?
+              ORDER BY operation_start DESC
+          ''', conn, params=[cutoff_time])
+          
+          # Get budget data
+          df_budget = pd.read_sql_query('''
+              SELECT project_id, phase, total_budget, 
+                     allocated_budget, consumed_budget
+              FROM budget_tracking
+              WHERE project_id = ?
+          ''', conn, params=['${{ env.PROJECT_ID }}'])
+          
+          conn.close()
+          
+          # Generate summary
+          total_tokens = df_usage['tokens_consumed'].sum()
+          total_operations = len(df_usage)
+          success_rate = (df_usage['success'].sum() / len(df_usage)) * 100 if len(df_usage) > 0 else 0
+          avg_tokens_per_op = df_usage['tokens_consumed'].mean() if len(df_usage) > 0 else 0
+          
+          # Agent breakdown
+          agent_summary = df_usage.groupby('agent_id')['tokens_consumed'].agg(['sum', 'count', 'mean'])
+          
+          # Operation type breakdown  
+          operation_summary = df_usage.groupby('operation_type')['tokens_consumed'].agg(['sum', 'count', 'mean'])
+          
+          report = {
+              'report_generated': datetime.now().isoformat(),
+              'time_window': time_window,
+              'summary': {
+                  'total_tokens_consumed': int(total_tokens),
+                  'total_operations': int(total_operations),
+                  'success_rate_percent': round(success_rate, 2),
+                  'average_tokens_per_operation': round(avg_tokens_per_op, 2)
+              },
+              'budget_status': df_budget.to_dict('records')[0] if not df_budget.empty else {},
+              'agent_breakdown': agent_summary.to_dict('index'),
+              'operation_breakdown': operation_summary.to_dict('index')
+          }
+          
+          # Save report
+          with open('token_usage_report.json', 'w') as f:
+              json.dump(report, f, indent=2)
+          
+          print('📊 Token Usage Report Generated')
+          print(f'⏰ Time window: {time_window}')
+          print(f'🔢 Total tokens: {total_tokens:,}')
+          print(f'🎯 Operations: {total_operations}')
+          print(f'✅ Success rate: {success_rate:.1f}%')
+          "
+
+      - name: Upload usage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: token-usage-report-${{ needs.initialize-tracking.outputs.tracking_id }}
+          path: token_usage_report.json
+
+  budget-alerts:
+    name: Budget Monitoring and Alerts
+    runs-on: ubuntu-latest
+    needs: initialize-tracking
+    if: needs.initialize-tracking.outputs.budget_status != 'healthy'
+    steps:
+      - name: Send budget warning
+        if: needs.initialize-tracking.outputs.budget_status == 'warning'
+        run: |
+          echo "⚠️ TOKEN BUDGET WARNING"
+          echo "Token usage is approaching budget limits (>80%)"
+          echo "Consider optimizing operations or increasing budget allocation"
+          # Add actual alerting mechanism (Slack, email, etc.)
+
+      - name: Send budget critical alert
+        if: needs.initialize-tracking.outputs.budget_status == 'critical'
+        run: |
+          echo "🚨 TOKEN BUDGET CRITICAL ALERT"
+          echo "Token usage has exceeded 95% of allocated budget!"
+          echo "Immediate action required to prevent service disruption"
+          # Add actual alerting mechanism (Slack, email, etc.)
+          # Consider failing the workflow or triggering emergency procedures
+
+  efficiency-analysis:
+    name: Token Efficiency Analysis
+    runs-on: ubuntu-latest
+    needs: generate-usage-report
+    if: github.event.inputs.track_operation == 'efficiency_audit' || github.event_name == 'schedule'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download usage report
+        uses: actions/download-artifact@v3
+        with:
+          name: token-usage-report-${{ needs.initialize-tracking.outputs.tracking_id }}
+
+      - name: Analyze efficiency patterns
+        run: |
+          python -c "
+          import json
+          
+          with open('token_usage_report.json', 'r') as f:
+              report = json.load(f)
+          
+          print('🔍 Token Efficiency Analysis')
+          print('=' * 40)
+          
+          # Analyze agent efficiency
+          if 'agent_breakdown' in report:
+              print('📊 Agent Efficiency:')
+              for agent, stats in report['agent_breakdown'].items():
+                  avg_tokens = stats.get('mean', 0)
+                  operations = stats.get('count', 0)
+                  print(f'  {agent}: {avg_tokens:.0f} avg tokens/op ({operations} ops)')
+          
+          # Analyze operation efficiency
+          if 'operation_breakdown' in report:
+              print('\n🎯 Operation Efficiency:')
+              for operation, stats in report['operation_breakdown'].items():
+                  avg_tokens = stats.get('mean', 0)
+                  operations = stats.get('count', 0)
+                  print(f'  {operation}: {avg_tokens:.0f} avg tokens/op ({operations} ops)')
+          
+          # Recommendations
+          print('\n💡 Optimization Recommendations:')
+          total_tokens = report['summary']['total_tokens_consumed']
+          if total_tokens > 10000:
+              print('  • Consider implementing token caching for repeated operations')
+          if report['summary']['success_rate_percent'] < 95:
+              print('  • Investigate failed operations to reduce token waste')
+          print('  • Review high-token operations for optimization opportunities')
+          "
+
+      - name: Upload efficiency analysis
+        uses: actions/upload-artifact@v3
+        with:
+          name: efficiency-analysis-${{ needs.initialize-tracking.outputs.tracking_id }}
+          path: token_usage_report.json

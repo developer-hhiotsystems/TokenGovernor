@@ -1,0 +1,220 @@
+{
+  "commit_template": {
+    "template_id": "commit_template",
+    "name": "Standardized Commit Creation",
+    "agent_type": "pr_management", 
+    "version": "1.0.0",
+    "steps": [
+      {
+        "step_id": "analyze_changes",
+        "name": "Analyze Code Changes",
+        "action": "git_diff_analysis",
+        "parameters": {
+          "include_staged": true,
+          "include_unstaged": false,
+          "max_files": 50
+        },
+        "expected_tokens": 2000,
+        "timeout": 60
+      },
+      {
+        "step_id": "generate_commit_message",
+        "name": "Generate Commit Message",
+        "action": "create_commit_message",
+        "parameters": {
+          "format": "conventional_commits",
+          "max_length": 72,
+          "include_scope": true,
+          "include_body": true
+        },
+        "expected_tokens": 800,
+        "timeout": 30
+      },
+      {
+        "step_id": "track_token_usage",
+        "name": "Track Token Usage with ccusage",
+        "action": "ccusage_track",
+        "parameters": {
+          "operation": "commit_creation",
+          "include_context": true
+        },
+        "expected_tokens": 300,
+        "timeout": 15
+      },
+      {
+        "step_id": "create_commit",
+        "name": "Create Git Commit",
+        "action": "git_commit",
+        "parameters": {
+          "sign_commits": true,
+          "verify": true
+        },
+        "expected_tokens": 400,
+        "timeout": 30
+      }
+    ],
+    "success_criteria": [
+      "changes_analyzed",
+      "message_generated",
+      "tokens_tracked",
+      "commit_created"
+    ],
+    "token_estimate": 3500,
+    "estimated_duration": 135
+  },
+  "pr_template": {
+    "template_id": "pr_template",
+    "name": "Pull Request Generation and Management",
+    "agent_type": "pr_management",
+    "version": "1.0.0",
+    "steps": [
+      {
+        "step_id": "analyze_branch_diff",
+        "name": "Analyze Branch Differences",
+        "action": "git_branch_diff",
+        "parameters": {
+          "base_branch": "main",
+          "compare_branch": "current",
+          "include_statistics": true
+        },
+        "expected_tokens": 2500,
+        "timeout": 90
+      },
+      {
+        "step_id": "generate_pr_description",
+        "name": "Generate PR Description",
+        "action": "create_pr_description",
+        "parameters": {
+          "template": "standard_pr_template",
+          "include_checklist": true,
+          "auto_link_issues": true,
+          "include_testing_notes": true
+        },
+        "expected_tokens": 1800,
+        "timeout": 60
+      },
+      {
+        "step_id": "create_pull_request",
+        "name": "Create Pull Request",
+        "action": "github_create_pr",
+        "parameters": {
+          "draft": false,
+          "assignees": ["auto"],
+          "labels": ["auto-generated", "phase-0"],
+          "milestone": "Phase 0 Completion"
+        },
+        "expected_tokens": 1200,
+        "timeout": 45
+      },
+      {
+        "step_id": "track_pr_tokens",
+        "name": "Track PR Creation Token Usage",
+        "action": "ccusage_track",
+        "parameters": {
+          "operation": "pr_creation",
+          "pr_metadata": true,
+          "change_summary": true
+        },
+        "expected_tokens": 500,
+        "timeout": 20
+      },
+      {
+        "step_id": "notify_stakeholders",
+        "name": "Notify Stakeholders",
+        "action": "send_notifications",
+        "parameters": {
+          "channels": ["github_notifications"],
+          "include_summary": true
+        },
+        "expected_tokens": 300,
+        "timeout": 15
+      }
+    ],
+    "success_criteria": [
+      "diff_analyzed",
+      "description_generated",
+      "pr_created",
+      "tokens_tracked",
+      "notifications_sent"
+    ],
+    "token_estimate": 6300,
+    "estimated_duration": 230
+  },
+  "token_tracking": {
+    "template_id": "token_tracking",
+    "name": "Comprehensive Token Usage Tracking",
+    "agent_type": "pr_management",
+    "version": "1.0.0",
+    "steps": [
+      {
+        "step_id": "initialize_ccusage",
+        "name": "Initialize ccusage Tracking",
+        "action": "ccusage_init",
+        "parameters": {
+          "project_id": "tokengovernor-mvp",
+          "tracking_level": "detailed",
+          "persist_data": true
+        },
+        "expected_tokens": 200,
+        "timeout": 10
+      },
+      {
+        "step_id": "capture_operation_context",
+        "name": "Capture Operation Context",
+        "action": "context_capture",
+        "parameters": {
+          "include_git_state": true,
+          "include_file_changes": true,
+          "include_agent_state": true
+        },
+        "expected_tokens": 600,
+        "timeout": 30
+      },
+      {
+        "step_id": "log_token_usage",
+        "name": "Log Token Consumption",
+        "action": "ccusage_log",
+        "parameters": {
+          "operation_type": "dynamic",
+          "breakdown_by_step": true,
+          "include_efficiency_metrics": true
+        },
+        "expected_tokens": 400,
+        "timeout": 20
+      },
+      {
+        "step_id": "update_budget_tracking",
+        "name": "Update Budget Tracking",
+        "action": "budget_update",
+        "parameters": {
+          "agent_budget": true,
+          "project_budget": true,
+          "generate_alerts": true
+        },
+        "expected_tokens": 300,
+        "timeout": 15
+      },
+      {
+        "step_id": "generate_usage_report",
+        "name": "Generate Usage Report",
+        "action": "usage_report",
+        "parameters": {
+          "format": "json",
+          "include_recommendations": true,
+          "store_in_db": true
+        },
+        "expected_tokens": 500,
+        "timeout": 25
+      }
+    ],
+    "success_criteria": [
+      "ccusage_initialized",
+      "context_captured",
+      "usage_logged",
+      "budget_updated",
+      "report_generated"
+    ],
+    "token_estimate": 2000,
+    "estimated_duration": 100
+  }
+}

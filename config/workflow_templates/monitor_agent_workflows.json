@@ -1,0 +1,240 @@
+{
+  "monitoring_dashboard": {
+    "template_id": "monitoring_dashboard",
+    "name": "Real-time Workflow Monitoring Dashboard",
+    "agent_type": "monitoring",
+    "version": "1.0.0",
+    "steps": [
+      {
+        "step_id": "collect_agent_metrics",
+        "name": "Collect Agent Performance Metrics",
+        "action": "metrics_collection",
+        "parameters": {
+          "agents": ["setup-agent-01", "pr-agent-01"],
+          "metrics": [
+            "token_consumption_rate",
+            "api_call_success_rate",
+            "task_completion_time",
+            "error_frequency"
+          ],
+          "sampling_interval": 30
+        },
+        "expected_tokens": 800,
+        "timeout": 45
+      },
+      {
+        "step_id": "analyze_budget_status",
+        "name": "Analyze Budget Status",
+        "action": "budget_analysis",
+        "parameters": {
+          "total_budget": 100000,
+          "warn_threshold": 80,
+          "critical_threshold": 95,
+          "projection_window": "1h"
+        },
+        "expected_tokens": 600,
+        "timeout": 30
+      },
+      {
+        "step_id": "check_workflow_health",
+        "name": "Check Workflow Health",
+        "action": "health_check",
+        "parameters": {
+          "components": ["github_api", "database", "agents", "communication"],
+          "timeout_per_check": 10
+        },
+        "expected_tokens": 500,
+        "timeout": 60
+      },
+      {
+        "step_id": "generate_dashboard_data",
+        "name": "Generate Dashboard Data",
+        "action": "dashboard_update",
+        "parameters": {
+          "format": "json",
+          "include_charts": true,
+          "refresh_interval": 60,
+          "store_history": true
+        },
+        "expected_tokens": 700,
+        "timeout": 30
+      }
+    ],
+    "success_criteria": [
+      "metrics_collected",
+      "budget_analyzed",
+      "health_verified",
+      "dashboard_updated"
+    ],
+    "token_estimate": 2600,
+    "estimated_duration": 165
+  },
+  "error_handling": {
+    "template_id": "error_handling",
+    "name": "Comprehensive Error Detection and Recovery",
+    "agent_type": "monitoring", 
+    "version": "1.0.0",
+    "steps": [
+      {
+        "step_id": "detect_anomalies",
+        "name": "Detect System Anomalies",
+        "action": "anomaly_detection",
+        "parameters": {
+          "monitoring_targets": [
+            "api_response_times",
+            "token_consumption_spikes",
+            "failure_rates",
+            "resource_utilization"
+          ],
+          "sensitivity": "medium",
+          "learning_period": "1h"
+        },
+        "expected_tokens": 1000,
+        "timeout": 60
+      },
+      {
+        "step_id": "classify_errors",
+        "name": "Classify and Prioritize Errors",
+        "action": "error_classification",
+        "parameters": {
+          "categories": [
+            "api_errors",
+            "agent_failures", 
+            "resource_exhaustion",
+            "communication_errors"
+          ],
+          "severity_levels": ["low", "medium", "high", "critical"],
+          "auto_escalate_critical": true
+        },
+        "expected_tokens": 800,
+        "timeout": 45
+      },
+      {
+        "step_id": "execute_recovery",
+        "name": "Execute Recovery Procedures",
+        "action": "recovery_execution",
+        "parameters": {
+          "strategies": [
+            "automatic_retry",
+            "fallback_execution",
+            "resource_reallocation",
+            "agent_restart"
+          ],
+          "max_recovery_attempts": 3,
+          "escalation_timeout": 300
+        },
+        "expected_tokens": 1200,
+        "timeout": 180
+      },
+      {
+        "step_id": "log_incidents",
+        "name": "Log Incidents and Actions",
+        "action": "incident_logging",
+        "parameters": {
+          "include_context": true,
+          "include_recovery_steps": true,
+          "generate_reports": true,
+          "update_knowledge_base": true
+        },
+        "expected_tokens": 600,
+        "timeout": 30
+      }
+    ],
+    "success_criteria": [
+      "anomalies_detected",
+      "errors_classified",
+      "recovery_executed",
+      "incidents_logged"
+    ],
+    "token_estimate": 3600,
+    "estimated_duration": 315
+  },
+  "status_report": {
+    "template_id": "status_report",
+    "name": "Comprehensive Status Reporting",
+    "agent_type": "monitoring",
+    "version": "1.0.0",
+    "steps": [
+      {
+        "step_id": "compile_agent_status",
+        "name": "Compile Agent Status Reports",
+        "action": "agent_status_compilation",
+        "parameters": {
+          "agents": ["all"],
+          "include_metrics": true,
+          "include_recent_activities": true,
+          "time_window": "1h"
+        },
+        "expected_tokens": 1200,
+        "timeout": 60
+      },
+      {
+        "step_id": "analyze_progress",
+        "name": "Analyze Phase Progress",
+        "action": "progress_analysis",
+        "parameters": {
+          "phase": "Phase 0",
+          "milestones": [
+            "repository_initialization",
+            "pr_workflow_setup",
+            "token_tracking_active"
+          ],
+          "completion_percentage": true
+        },
+        "expected_tokens": 1000,
+        "timeout": 45
+      },
+      {
+        "step_id": "budget_summary",
+        "name": "Generate Budget Summary",
+        "action": "budget_summary",
+        "parameters": {
+          "breakdown_by_agent": true,
+          "breakdown_by_operation": true,
+          "efficiency_metrics": true,
+          "projections": true
+        },
+        "expected_tokens": 800,
+        "timeout": 30
+      },
+      {
+        "step_id": "generate_recommendations",
+        "name": "Generate Optimization Recommendations",
+        "action": "recommendation_engine",
+        "parameters": {
+          "areas": [
+            "resource_allocation",
+            "workflow_optimization",
+            "error_reduction",
+            "efficiency_improvements"
+          ],
+          "priority_ranking": true
+        },
+        "expected_tokens": 1000,
+        "timeout": 45
+      },
+      {
+        "step_id": "create_report",
+        "name": "Create Formatted Report",
+        "action": "report_generation",
+        "parameters": {
+          "format": "markdown",
+          "include_charts": false,
+          "include_appendices": true,
+          "store_in_history": true
+        },
+        "expected_tokens": 800,
+        "timeout": 30
+      }
+    ],
+    "success_criteria": [
+      "agent_status_compiled",
+      "progress_analyzed", 
+      "budget_summarized",
+      "recommendations_generated",
+      "report_created"
+    ],
+    "token_estimate": 4800,
+    "estimated_duration": 210
+  }
+}

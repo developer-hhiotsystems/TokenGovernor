@@ -1,0 +1,251 @@
+{
+  "swarm_config": {
+    "swarm_id": "tokengovernor-phase0-swarm",
+    "name": "TokenGovernor Phase 0 Swarm",
+    "version": "1.0.0",
+    "topology": "hierarchical",
+    "created_at": "2025-08-25T00:00:00Z",
+    "phase": "Phase 0 - GitHub Setup and Change Management"
+  },
+  "agents": [
+    {
+      "agent_id": "setup-agent-01",
+      "name": "GitHub Setup Agent",
+      "type": "setup",
+      "config": {
+        "context_window": 8192,
+        "max_tokens": 35000,
+        "temperature": 0.3,
+        "stateless": true,
+        "rate_limit": {
+          "api_calls_per_minute": 5,
+          "burst_limit": 10
+        }
+      },
+      "capabilities": [
+        "github_api_integration",
+        "repository_initialization",
+        "branch_management",
+        "actions_setup"
+      ],
+      "memory_namespace": "setup_operations",
+      "priority": 1,
+      "dependencies": [],
+      "workflow_templates": [
+        "github_repo_init",
+        "branch_setup", 
+        "actions_config"
+      ]
+    },
+    {
+      "agent_id": "pr-agent-01", 
+      "name": "Pull Request Agent",
+      "type": "pr_management",
+      "config": {
+        "context_window": 8192,
+        "max_tokens": 40000,
+        "temperature": 0.2,
+        "stateless": true,
+        "rate_limit": {
+          "api_calls_per_minute": 5,
+          "burst_limit": 8
+        }
+      },
+      "capabilities": [
+        "commit_creation",
+        "pr_generation", 
+        "token_tracking",
+        "ccusage_integration",
+        "template_management"
+      ],
+      "memory_namespace": "pr_operations",
+      "priority": 2,
+      "dependencies": ["setup-agent-01"],
+      "workflow_templates": [
+        "commit_template",
+        "pr_template",
+        "token_tracking"
+      ]
+    },
+    {
+      "agent_id": "monitor-agent-01",
+      "name": "Workflow Monitor Agent", 
+      "type": "monitoring",
+      "config": {
+        "context_window": 8192,
+        "max_tokens": 25000,
+        "temperature": 0.1,
+        "stateless": true,
+        "rate_limit": {
+          "api_calls_per_minute": 5,
+          "burst_limit": 6
+        }
+      },
+      "capabilities": [
+        "token_monitoring",
+        "workflow_coordination",
+        "error_handling",
+        "status_reporting",
+        "budget_tracking"
+      ],
+      "memory_namespace": "monitoring_operations",
+      "priority": 3,
+      "dependencies": ["setup-agent-01", "pr-agent-01"],
+      "workflow_templates": [
+        "monitoring_dashboard",
+        "error_handling",
+        "status_report"
+      ]
+    }
+  ],
+  "communication": {
+    "protocol": "event_driven_messaging",
+    "message_bus": "sqlite_backed",
+    "channels": [
+      {
+        "name": "setup_status",
+        "subscribers": ["pr-agent-01", "monitor-agent-01"],
+        "message_types": ["repository_created", "branches_initialized", "actions_configured"]
+      },
+      {
+        "name": "pr_queue", 
+        "subscribers": ["setup-agent-01", "monitor-agent-01"],
+        "message_types": ["pr_created", "pr_merged", "pr_failed"]
+      },
+      {
+        "name": "token_usage",
+        "subscribers": ["monitor-agent-01"],
+        "message_types": ["token_consumed", "budget_warning", "budget_exceeded"]
+      },
+      {
+        "name": "error_logs",
+        "subscribers": ["monitor-agent-01"],
+        "message_types": ["agent_error", "api_error", "system_error"]
+      }
+    ]
+  },
+  "coordination": {
+    "handoff_patterns": [
+      {
+        "trigger": "repository_initialized",
+        "from": "setup-agent-01",
+        "to": "pr-agent-01",
+        "data_payload": ["repo_metadata", "branch_info", "actions_status"]
+      },
+      {
+        "trigger": "pr_created", 
+        "from": "pr-agent-01",
+        "to": "monitor-agent-01",
+        "data_payload": ["pr_details", "token_usage", "commit_hash"]
+      },
+      {
+        "trigger": "error_detected",
+        "from": "any",
+        "to": "monitor-agent-01", 
+        "data_payload": ["error_details", "context", "suggested_actions"]
+      }
+    ],
+    "synchronization_points": [
+      "swarm_initialization",
+      "repository_ready",
+      "first_pr_created", 
+      "phase_completion"
+    ]
+  },
+  "resource_management": {
+    "token_budget": {
+      "total": 100000,
+      "allocations": {
+        "setup-agent-01": 35000,
+        "pr-agent-01": 40000,
+        "monitor-agent-01": 25000
+      },
+      "reserves": {
+        "overhead_buffer": 5000,
+        "emergency_reserve": 10000
+      }
+    },
+    "rate_limiting": {
+      "global_limit": "15 API calls/min",
+      "per_agent_limit": "5 API calls/min",
+      "burst_allowance": 24,
+      "cooldown_period": 60
+    }
+  },
+  "persistence": {
+    "database": {
+      "type": "sqlite",
+      "path": "workflow_data.db",
+      "tables": [
+        "agent_states",
+        "message_queue",
+        "token_usage",
+        "workflow_history",
+        "error_logs"
+      ]
+    },
+    "backup_strategy": {
+      "frequency": "after_each_phase",
+      "retention": "30 days",
+      "location": "backups/"
+    }
+  },
+  "error_handling": {
+    "retry_policy": {
+      "max_attempts": 3,
+      "backoff_strategy": "exponential",
+      "base_delay": 1,
+      "max_delay": 60
+    },
+    "escalation": {
+      "threshold": 3,
+      "fallback_agent": "monitor-agent-01",
+      "notification_channels": ["error_logs", "status_report"]
+    },
+    "recovery_strategies": [
+      "automatic_retry",
+      "fallback_execution", 
+      "manual_intervention"
+    ]
+  },
+  "monitoring": {
+    "metrics": [
+      "token_consumption_rate",
+      "api_call_success_rate", 
+      "task_completion_time",
+      "error_frequency",
+      "agent_utilization"
+    ],
+    "alerts": [
+      {
+        "condition": "token_usage > 80%",
+        "action": "budget_warning"
+      },
+      {
+        "condition": "error_rate > 5%",
+        "action": "escalate_to_monitor"
+      },
+      {
+        "condition": "api_rate_limit_approached",
+        "action": "throttle_requests"
+      }
+    ]
+  },
+  "phase_specific": {
+    "phase_0_tasks": [
+      "initialize_github_repository",
+      "setup_branch_structure",
+      "configure_github_actions",
+      "create_pr_templates",
+      "integrate_ccusage_tracking",
+      "establish_workflow_monitoring"
+    ],
+    "success_criteria": [
+      "repository_accessible",
+      "actions_running",
+      "pr_workflow_functional",
+      "token_tracking_active",
+      "under_budget"
+    ]
+  }
+}

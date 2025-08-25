@@ -24,8 +24,7 @@ class GitHubRepoManager:
             name=repo_config.get('name', 'TokenGovernor'),
             description=config.get('description', 'Standalone governance system for agentic coding workflows'),
             private=repo_config.get('private', False),
-            auto_init=False,  # We already have local files
-            default_branch=repo_config.get('default_branch', 'main')
+            auto_init=False  # We already have local files
         )
         
         print(f"Created repository: {repo.html_url}")
