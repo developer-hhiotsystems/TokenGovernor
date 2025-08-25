@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "pre-command": {
+      "enabled": true,
+      "script": ".claude-flow/hooks/pre-command.bat",
+      "shell": "cmd"
+    },
+    "post-command": {
+      "enabled": true,
+      "script": ".claude-flow/hooks/post-command.bat", 
+      "shell": "cmd"
+    }
+  },
+  "platform": "windows",
+  "shell": "cmd",
+  "metrics": {
+    "enabled": true,
+    "path": ".claude-flow/metrics"
+  },
+  "compatibility": {
+    "unix_commands": false,
+    "windows_batch": true
+  }
+}

@@ -75,3 +75,6 @@ dump.rdb
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude-flow metrics (auto-generated)
+.claude-flow/metrics/
